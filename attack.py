@@ -94,11 +94,11 @@ def attackchar(model, args, numclass, alphabet, test_loader, device, maxbatch=No
     origsamples = torch.cat(origsample)
     origsampleidx = torch.cat(origsampleidx)
     acc = corrects / advinputs.size(0)
-    print('Accuracy %.5f' % (acc))
+    print('Accuracy %.5f' % acc)
     f = open('attack_log.txt', 'a')
     f.write(
         '%d\t%s\t%s\t%s\t%d\t%.2f\n' % (args.data, args.model, args.scoring, args.transformer, args.power, 100 * acc))
-    if args.advsamplepath == None:
+    if args.advsamplepath is None:
         advsamplepath = 'advsamples/%s_%d_%s_%s_%d.dat' % (
             args.model, args.data, args.scoring, args.transformer, args.power)
     else:

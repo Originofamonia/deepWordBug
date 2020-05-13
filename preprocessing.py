@@ -6,17 +6,16 @@
 """Utilities for text input preprocessing.
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import string
 import sys
 import warnings
 from collections import OrderedDict
 from collections import defaultdict
-
+import hashlib
 import numpy as np
+
 # from six.moves import range
 # from six.moves import zip
 
@@ -46,8 +45,8 @@ def text_to_word_sequence(text,
         text = text.lower()
 
     if sys.version_info < (3,):
-        if isinstance(text, unicode):
-            translate_map = dict((ord(c), unicode(split)) for c in filters)
+        if isinstance(text, str):
+            translate_map = dict((ord(c), str(split)) for c in filters)
             text = text.translate(translate_map)
         elif len(split) == 1:
             translate_map = maketrans(filters, split * len(filters))
@@ -129,7 +128,7 @@ def hashing_trick(text, n,
     if hash_function is None:
         hash_function = hash
     elif hash_function == 'md5':
-        hash_function = lambda w: int(md5(w.encode()).hexdigest(), 16)
+        hash_function = lambda w: int(hashlib.md5(w.encode()).hexdigest(), 16)
 
     seq = text_to_word_sequence(text,
                                 filters=filters,
@@ -261,6 +260,7 @@ class Tokenizer(object):
                 elif self.oov_token is not None:
                     vect.append(oov_token_index)
             yield vect
+
 
 def pad_sequences(sequences, maxlen=None, dtype='int32',
                   padding='pre', truncating='pre', value=0.):

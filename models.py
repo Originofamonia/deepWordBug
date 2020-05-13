@@ -77,7 +77,6 @@ class SmallRNN(nn.Module):
     def __init__(self, classes=4, bidirection=False, layernum=1, length=20000, embedding_size=100, hiddensize=100):
         super(SmallRNN, self).__init__()
         self.embd = nn.Embedding(length, embedding_size)
-        # self.lstm = nn.LSTMCell(hiddensize, hiddensize)
         self.lstm = nn.LSTM(embedding_size, hiddensize, layernum, bidirectional=bidirection)
         self.hiddensize = hiddensize
         numdirections = 1 + bidirection
@@ -90,7 +89,7 @@ class SmallRNN(nn.Module):
         if returnembd:
             embd = Variable(embd.data, requires_grad=True).to(device)
             embd.retain_grad()
-            # print embd.size()
+
         h0 = Variable(torch.zeros(self.hsize, embd.size(0), self.hiddensize)).to(device)
         c0 = Variable(torch.zeros(self.hsize, embd.size(0), self.hiddensize)).to(device)
         # for inputs in x:
@@ -110,8 +109,6 @@ class SmallRNN(nn.Module):
 class SmallCharRNN(nn.Module):
     def __init__(self, classes=4, bidirection=False, layernum=1, char_size=69, hiddensize=100):
         super(SmallCharRNN, self).__init__()
-        # self.embd = nn.Embedding(length, embedding_size)
-        # self.lstm = nn.LSTMCell(hiddensize, hiddensize)
         self.lstm = nn.LSTM(char_size, hiddensize, layernum, bidirectional=bidirection)
         self.hiddensize = hiddensize
         numdirections = 1 + bidirection
@@ -195,7 +192,6 @@ class WordCNN(nn.Module):
         x = self.conv5(x)
         x = self.conv6(x)
         x = x.view(x.size(0), -1)
-        # print x.size()
         x = self.fc1(x)
         x = self.fc2(x)
         x = self.fc3(x)

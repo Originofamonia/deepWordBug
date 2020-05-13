@@ -24,7 +24,7 @@ def main():
                         help='length: default 1014')
     parser.add_argument('--wordlength', type=int, default=500, metavar='N',
                         help='length: default 500')
-    parser.add_argument('--model', type=str, default='simplernn', metavar='N',
+    parser.add_argument('--model', type=str, default='charcnn', metavar='N',
                         help='model type: LSTM as default')
     parser.add_argument('--space', type=bool, default=False, metavar='B',
                         help='Whether including space in the alphabet')
@@ -34,7 +34,7 @@ def main():
                         help='Backward direction')
     parser.add_argument('--epochs', type=int, default=10, metavar='B',
                         help='Number of epochs')
-    parser.add_argument('--batchsize', type=int, default=128, metavar='B',
+    parser.add_argument('--batchsize', type=int, default=100, metavar='B',
                         help='batch size')
     parser.add_argument('--dictionarysize', type=int, default=20000, metavar='B',
                         help='batch size')
