@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
 import argparse
-import model
+import models
 import numpy as np
 import math
 
