@@ -25,7 +25,7 @@ def main():
                         help='length: default 1014')
     parser.add_argument('--wordlength', type=int, default=500, metavar='N',
                         help='length: default 500')
-    parser.add_argument('--model', type=str, default='charcnn', metavar='N',
+    parser.add_argument('--model', type=str, default='simplernn', metavar='N',
                         help='model type: LSTM as default')
     parser.add_argument('--space', type=bool, default=False, metavar='B',
                         help='Whether including space in the alphabet')
@@ -76,7 +76,7 @@ def main():
         (train, test, numclass) = loaddata(args.data)
         trainchar = Chardata(train, getidx=True)
         testchar = Chardata(test, getidx=True)
-        train_loader = DataLoader(trainchar, batch_size=args.batchsize, num_workers=4, shuffle=True)
+        train_loader = DataLoader(trainchar, batch_size=args.batchsize, num_workers=4, shuffle=False)
         test_loader = DataLoader(testchar, batch_size=args.batchsize, num_workers=4, shuffle=False)
         alphabet = trainchar.alphabet
         maxlength = args.charlength
@@ -87,7 +87,7 @@ def main():
         word_index = tokenizer.word_index
         trainword = Worddata(train, getidx=True, rawdata=rawtrain)
         testword = Worddata(test, getidx=True, rawdata=rawtest)
-        train_loader = DataLoader(trainword, batch_size=args.batchsize, num_workers=4, shuffle=True)
+        train_loader = DataLoader(trainword, batch_size=args.batchsize, num_workers=4, shuffle=False)
         test_loader = DataLoader(testword, batch_size=args.batchsize, num_workers=4, shuffle=False)
         maxlength = args.wordlength
 
@@ -116,9 +116,18 @@ def main():
             inputs, target = inputs.to(device), target.to(device)
             if args.adv_train:
                 if args.datatype == "char":
-                    x_adv = generate_char_adv(model, args, numclass, alphabet, data, device, maxbatch=args.maxbatches)
+                    x_adv = generate_char_adv(model, args, numclass, alphabet, data, device)
                 elif args.datatype == "word":
-                    x_adv = generate_word_adv(model, args, numclass, data, device, maxbatch=args.maxbatches)
+                    index2word = {0: '[PADDING]', 1: '[START]', 2: '[UNKNOWN]', 3: ''}
+                    if args.dictionarysize == 20000:
+                        for i in word_index:
+                            if word_index[i] + 3 < args.dictionarysize:
+                                index2word[word_index[i] + 3] = i
+                    else:
+                        for i in word_index:
+                            if word_index[i] + 3 < args.dictionarysize:
+                                index2word[word_index[i] + 3] = i
+                    x_adv = generate_word_adv(model, args, numclass, data, device, index2word, word_index)
                 output = model(x_adv)
             else:
                 output = model(inputs)

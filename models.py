@@ -55,7 +55,7 @@ class SmallRNN(nn.Module):
         numdirections = 1 + bidirection
         self.hsize = numdirections * layernum
         self.linear = nn.Linear(hiddensize * numdirections, classes)
-        self.log_softmax = nn.LogSoftmax()
+        self.log_softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, x, returnembd=False):
         embd = self.embd(x)

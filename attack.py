@@ -35,7 +35,7 @@ def recoveradv(rawsequence, index2word, inputs, advwords):
     return advsequence
 
 
-def generate_char_adv(model, args, numclass, alphabet, data, device, maxbatch=None):
+def generate_char_adv(model, args, numclass, alphabet, data, device):
     # tgt = []
     # origsample = []
     # origsampleidx = []
@@ -146,8 +146,42 @@ def attackchar(model, args, numclass, alphabet, test_loader, device, maxbatch=No
                 'adv_str': modified}, advsamplepath)
 
 
-def generate_word_adv(model, args, numclass, data, device, maxbatch=None):
-    pass
+def generate_word_adv(model, args, numclass, data, device, index2word, word_index):
+    inputs, target, idx, raw = data
+    inputs, target = inputs.to(device), target.to(device)
+    # origsample.append(inputs)
+    # origsampleidx.append(idx)
+    # tgt.append(target)
+    # wtmp = []
+    output = model(inputs)
+    pred = torch.max(output, 1)[1].view(target.size())
+
+    losses = scoring.scorefunc(args.scoring)(model, inputs, pred, numclass)
+
+    sorted, indices = torch.sort(losses, dim=1, descending=True)
+
+    advinputs = inputs.clone()
+
+    # for k in range(inputs.size()[0]):
+    #     wtmp.append([])
+    #     for i in range(inputs.size()[1]):
+    #         if advinputs[k, i].item() > 3:
+    #             wtmp[-1].append(index2word[advinputs[k, i].item()])
+    #         else:
+    #             wtmp[-1].append('')
+    for k in range(inputs.size()[0]):
+        j = 0
+        t = 0
+        while j < args.power and t < inputs.size()[1]:
+            if advinputs[k, indices[k][t]].item() > 3:
+                word, advinputs[k, indices[k][t]] = transformer.transform(args.transformer)(
+                    advinputs[k, indices[k][t]].item(), word_index, index2word, top_words=args.dictionarysize)
+                # wtmp[k][indices[k][t]] = word
+                # print(word)
+                j += 1
+            t += 1
+
+    return advinputs
 
 
 def attackword(model, args, numclass, test_loader, device, index2word, word_index, maxbatch=None):
