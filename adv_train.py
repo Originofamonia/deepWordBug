@@ -25,7 +25,7 @@ def main():
                         help='length: default 1014')
     parser.add_argument('--wordlength', type=int, default=500, metavar='N',
                         help='length: default 500')
-    parser.add_argument('--model', type=str, default='simplernn', metavar='N',
+    parser.add_argument('--model', type=str, default='charcnn', metavar='N',
                         help='model type: LSTM as default')
     parser.add_argument('--space', type=bool, default=False, metavar='B',
                         help='Whether including space in the alphabet')
@@ -37,7 +37,7 @@ def main():
                         help='Number of epochs')
     parser.add_argument('--power', type=int, default=30, metavar='N',
                         help='Attack power')
-    parser.add_argument('--batchsize', type=int, default=100, metavar='B',
+    parser.add_argument('--batchsize', type=int, default=20, metavar='B',
                         help='batch size')
     parser.add_argument('--maxbatches', type=int, default=None, metavar='B',
                         help='maximum batches of adv samples generated')
@@ -80,6 +80,7 @@ def main():
         test_loader = DataLoader(testchar, batch_size=args.batchsize, num_workers=4, shuffle=False)
         alphabet = trainchar.alphabet
         maxlength = args.charlength
+        word_index = None
     elif args.datatype == "word":
         (train, test, tokenizer, numclass, rawtrain,
          rawtest) = loaddatawithtokenize(args.data, nb_words=args.dictionarysize, datalen=args.wordlength,
@@ -90,6 +91,7 @@ def main():
         train_loader = DataLoader(trainword, batch_size=args.batchsize, num_workers=4, shuffle=False)
         test_loader = DataLoader(testword, batch_size=args.batchsize, num_workers=4, shuffle=False)
         maxlength = args.wordlength
+        alphabet = None
 
     if args.model == "charcnn":
         model = CharCNN(classes=numclass)
@@ -115,19 +117,14 @@ def main():
             inputs, target = Variable(inputs), Variable(target)
             inputs, target = inputs.to(device), target.to(device)
             if args.adv_train:
-                if args.datatype == "char":
-                    x_adv = generate_char_adv(model, args, numclass, alphabet, data, device)
-                elif args.datatype == "word":
-                    index2word = {0: '[PADDING]', 1: '[START]', 2: '[UNKNOWN]', 3: ''}
-                    for i in word_index:
-                        if word_index[i] + 3 < args.dictionarysize:
-                            index2word[word_index[i] + 3] = i
-                    x_adv = generate_word_adv(model, args, numclass, data, device, index2word, word_index)
-                output = model(x_adv)
+                y_adv, x_adv = get_x_adv(args, data, device, model, numclass, word_index, alphabet)
+                loss = F.nll_loss(y_adv, target)
+                # add a constraint on penultimate hidden layer
+                h_loss = get_penultimate_hidden(data, x_adv, device, model)
+                loss += h_loss
             else:
                 output = model(inputs)
-
-            loss = F.nll_loss(output, target)
+                loss = F.nll_loss(output, target)
 
             optimizer.zero_grad()
             loss.backward()
@@ -148,18 +145,10 @@ def main():
             pred = output.data.max(1, keepdim=True)[1]
             clean_correct += pred.eq(target.data.view_as(pred)).cpu().sum().item()
             # inference on adv test set
-            if args.datatype == "char":
-                x_adv = generate_char_adv(model, args, numclass, alphabet, data, device)
-            elif args.datatype == "word":
-                index2word = {0: '[PADDING]', 1: '[START]', 2: '[UNKNOWN]', 3: ''}
-                for i in word_index:
-                    if word_index[i] + 3 < args.dictionarysize:
-                        index2word[word_index[i] + 3] = i
-                x_adv = generate_word_adv(model, args, numclass, data, device, index2word, word_index)
-            output_adv = model(x_adv)
-            loss_adv = F.nll_loss(output_adv, target)
+            y_adv, x_adv = get_x_adv(args, data, device, model, numclass, word_index, alphabet)
+            loss_adv = F.nll_loss(y_adv, target)
             total_loss_adv += loss_adv.item()
-            pred_adv = output_adv.data.max(1, keepdim=True)[1]
+            pred_adv = y_adv.data.max(1, keepdim=True)[1]
             adv_correct += pred_adv.eq(target.data.view_as(pred_adv)).cpu().sum().item()
 
         clean_acc = clean_correct / len(test_loader.dataset)
@@ -182,6 +171,28 @@ def main():
             'bestacc': bestacc,
             'optimizer': optimizer.state_dict(),
         }, is_best, filename=fname)
+
+
+def get_x_adv(args, data, device, model, numclass, word_index=None, alphabet=None):
+    if args.datatype == "char":
+        x_adv = generate_char_adv(model, args, numclass, data, device, alphabet)
+    elif args.datatype == "word":
+        index2word = {0: '[PADDING]', 1: '[START]', 2: '[UNKNOWN]', 3: ''}
+        for i in word_index:
+            if word_index[i] + 3 < args.dictionarysize:
+                index2word[word_index[i] + 3] = i
+        x_adv = generate_word_adv(model, args, numclass, data, device, index2word, word_index)
+    y_adv = model(x_adv)
+    return y_adv, x_adv
+
+
+def get_penultimate_hidden(data, x_adv, device, model):
+    inputs, target, idx, raw = data
+    inputs, target = inputs.to(device), target.to(device)
+    h = model.get_penultimate_hidden(inputs)
+    h_adv = model.get_penultimate_hidden(x_adv)
+    h_loss = nn.MSELoss()(h_adv, h)
+    return h_loss
 
 
 if __name__ == '__main__':

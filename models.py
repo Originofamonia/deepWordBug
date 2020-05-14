@@ -45,6 +45,18 @@ class CharCNN(nn.Module):
 
         return x
 
+    def get_penultimate_hidden(self, inputs):
+        x = self._pool1(F.relu(self._conv1(inputs)))
+        x = self._pool1(F.relu(self._conv2(x)))
+        x = F.relu(self._conv3(x))
+        x = F.relu(self._conv4(x))
+        x = F.relu(self._conv5(x))
+        x = self._pool1(F.relu(self._conv6(x)))
+        x = x.view(x.size(0), -1)
+        x = self._drop1(F.relu(self._fc1(x)))
+        x = self._fc2(x)
+        return x
+
 
 class SmallRNN(nn.Module):
     def __init__(self, classes=4, bidirection=False, layernum=1, length=20000, embedding_size=100, hiddensize=100):
@@ -65,18 +77,28 @@ class SmallRNN(nn.Module):
 
         h0 = Variable(torch.zeros(self.hsize, embd.size(0), self.hiddensize)).to(device)
         c0 = Variable(torch.zeros(self.hsize, embd.size(0), self.hiddensize)).to(device)
-        # for inputs in x:
         x = embd.transpose(0, 1)
         x, (hn, cn) = self.lstm(x, (h0, c0))
         x = x[-1]
-        # x = x[-1].transpose(0,1)
-        # x = x.view(x.size(0),-1)
         x = self.linear(x)
         x = self.log_softmax(x)
         if returnembd:
             return embd, x
         else:
             return x
+
+    def get_penultimate_hidden(self, inputs, returnembd=False):
+        embd = self.embd(inputs)
+        if returnembd:
+            embd = Variable(embd.data, requires_grad=True).to(device)
+            embd.retain_grad()
+
+        h0 = Variable(torch.zeros(self.hsize, embd.size(0), self.hiddensize)).to(device)
+        c0 = Variable(torch.zeros(self.hsize, embd.size(0), self.hiddensize)).to(device)
+        x = embd.transpose(0, 1)
+        x, (hn, cn) = self.lstm(x, (h0, c0))
+        x = x[-1]
+        return x
 
 
 class SmallCharRNN(nn.Module):

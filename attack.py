@@ -35,7 +35,7 @@ def recoveradv(rawsequence, index2word, inputs, advwords):
     return advsequence
 
 
-def generate_char_adv(model, args, numclass, alphabet, data, device):
+def generate_char_adv(model, args, numclass, data, device, alphabet):
     # tgt = []
     # origsample = []
     # origsampleidx = []
