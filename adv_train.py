@@ -119,14 +119,9 @@ def main():
                     x_adv = generate_char_adv(model, args, numclass, alphabet, data, device)
                 elif args.datatype == "word":
                     index2word = {0: '[PADDING]', 1: '[START]', 2: '[UNKNOWN]', 3: ''}
-                    if args.dictionarysize == 20000:
-                        for i in word_index:
-                            if word_index[i] + 3 < args.dictionarysize:
-                                index2word[word_index[i] + 3] = i
-                    else:
-                        for i in word_index:
-                            if word_index[i] + 3 < args.dictionarysize:
-                                index2word[word_index[i] + 3] = i
+                    for i in word_index:
+                        if word_index[i] + 3 < args.dictionarysize:
+                            index2word[word_index[i] + 3] = i
                     x_adv = generate_word_adv(model, args, numclass, data, device, index2word, word_index)
                 output = model(x_adv)
             else:
@@ -138,23 +133,44 @@ def main():
             loss.backward()
             optimizer.step()
 
-        correct = .0
+        clean_correct = .0
         total_loss = 0
+        adv_correct = .0
+        total_loss_adv = 0
         model.eval()
-        for dataid, inputs, target in enumerate(test_loader):
+        for dataid, data in enumerate(test_loader):
+            inputs, target, idx, raw = data
             inputs, target = inputs.to(device), target.to(device)
+            # inference on clean test set
             output = model(inputs)
             loss = F.nll_loss(output, target)
             total_loss += loss.item()
             pred = output.data.max(1, keepdim=True)[1]
-            correct += pred.eq(target.data.view_as(pred)).cpu().sum().item()
+            clean_correct += pred.eq(target.data.view_as(pred)).cpu().sum().item()
+            # inference on adv test set
+            if args.datatype == "char":
+                x_adv = generate_char_adv(model, args, numclass, alphabet, data, device)
+            elif args.datatype == "word":
+                index2word = {0: '[PADDING]', 1: '[START]', 2: '[UNKNOWN]', 3: ''}
+                for i in word_index:
+                    if word_index[i] + 3 < args.dictionarysize:
+                        index2word[word_index[i] + 3] = i
+                x_adv = generate_word_adv(model, args, numclass, data, device, index2word, word_index)
+            output_adv = model(x_adv)
+            loss_adv = F.nll_loss(output_adv, target)
+            total_loss_adv += loss_adv.item()
+            pred_adv = output_adv.data.max(1, keepdim=True)[1]
+            adv_correct += pred_adv.eq(target.data.view_as(pred_adv)).cpu().sum().item()
 
-        acc = correct / len(test_loader.dataset)
+        clean_acc = clean_correct / len(test_loader.dataset)
         avg_loss = total_loss / len(test_loader.dataset)
-        print('Epoch %d : Loss %.4f Accuracy %.5f' % (epoch, avg_loss, acc))
-        is_best = acc > bestacc
+        adv_acc = adv_correct / len(test_loader.dataset)
+        adv_loss = total_loss_adv / len(test_loader.dataset)
+        print('Epoch %d : clean loss %.4f clean accuracy %.5f; adv loss %.4f adv accuracy %.5f'
+              % (epoch, avg_loss, clean_acc, adv_loss, adv_acc))
+        is_best = clean_acc > bestacc
         if is_best:
-            bestacc = acc
+            bestacc = clean_acc
         if args.dictionarysize != 20000:
             fname = "models/" + args.model + str(args.dictionarysize) + "_" + str(args.data)
         else:
