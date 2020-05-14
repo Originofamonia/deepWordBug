@@ -8,8 +8,8 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 # from torch.autograd import Variable
 import argparse
-import loaddata
-import dataloader
+from loaddata import loaddata, loaddatawithtokenize
+from dataloader import Chardata, Worddata
 from models import CharCNN, SmallRNN
 import scoring
 import scoring_char
@@ -33,6 +33,45 @@ def recoveradv(rawsequence, index2word, inputs, advwords):
     except:
         print('something went wrong')
     return advsequence
+
+
+def generate_char_adv(model, args, numclass, alphabet, data, device, maxbatch=None):
+    # tgt = []
+    # origsample = []
+    # origsampleidx = []
+    # modified = []
+
+    inputs, target, idx, raw = data
+    inputs, target = inputs.to(device), target.to(device)
+    output = model(inputs)
+    # tgt.append(target)
+    # origsample.append(inputs)
+    # origsampleidx.append(idx)
+    pred = torch.max(output, 1)[1].view(target.size())
+    losses = torch.zeros(inputs.size()[0], inputs.size()[2])
+
+    losses = scoring_char.scorefunc(args.scoring)(model, inputs, pred, numclass)
+
+    sorted, indices = torch.sort(losses, dim=1, descending=True)
+    advinputs = inputs.clone()
+    dt = inputs.sum(dim=1).int()
+    for k in range(inputs.size()[0]):
+        md = raw[k][:]
+        md = md[::-1]
+        j = 0
+        t = 0
+        while j < args.power and t < inputs.size()[2]:
+            if dt[k, indices[k][t]].item() > 0:
+                advinputs[k, :, indices[k][t]], nowchar = \
+                    transformer_char.transform(args.transformer)(inputs,
+                                                                 torch.max(advinputs[k, :, indices[k][t]],
+                                                                           0)[1].item(), alphabet)
+                md = md[:indices[k][t].item()] + nowchar + md[indices[k][t].item() + 1:]
+                j += 1
+            t += 1
+        # md = md[::-1]
+        # modified.append(md)
+    return advinputs
 
 
 def attackchar(model, args, numclass, alphabet, test_loader, device, maxbatch=None):
@@ -105,6 +144,10 @@ def attackchar(model, args, numclass, alphabet, test_loader, device, maxbatch=No
         advsamplepath = args.advsamplepath
     torch.save({'original': origsamples, 'sampleid': origsampleidx, 'advinputs': advinputs, 'labels': target,
                 'adv_str': modified}, advsamplepath)
+
+
+def generate_word_adv(model, args, numclass, data, device, maxbatch=None):
+    pass
 
 
 def attackword(model, args, numclass, test_loader, device, index2word, word_index, maxbatch=None):
@@ -193,13 +236,13 @@ def main():
                         help='data: can be 0,1,2,3,5,6,7 which specify a textdata file')
     parser.add_argument('--externaldata', type=str, default='', metavar='S',
                         help='External database file. Default: Empty string')
-    parser.add_argument('--model', type=str, default='simplernn', metavar='S',
+    parser.add_argument('--model', type=str, default='charcnn', metavar='S',
                         help='model type(simplernn, charcnn, bilstm). LSTM as default.')
-    parser.add_argument('--modelpath', type=str, default='models/simplernn_0_bestmodel.dat', metavar='S',
+    parser.add_argument('--modelpath', type=str, default='models/charcnn_0_bestmodel.dat', metavar='S',
                         help='model file path')
     parser.add_argument('--power', type=int, default=30, metavar='N',
                         help='Attack power')
-    parser.add_argument('--batchsize', type=int, default=128, metavar='N',
+    parser.add_argument('--batchsize', type=int, default=30, metavar='N',
                         help='batch size')
     parser.add_argument('--scoring', type=str, default='replaceone', metavar='N',
                         help='Scoring function.')
@@ -232,31 +275,31 @@ def main():
     if args.externaldata != '':
         if args.datatype == 'char':
             (data, numclass) = pickle.load(open(args.externaldata, 'rb'))
-            testchar = dataloader.Chardata(data, getidx=True)
+            testchar = Chardata(data, getidx=True)
             test_loader = DataLoader(testchar, batch_size=args.batchsize, num_workers=4, shuffle=False)
             alphabet = testchar.alphabet
         elif args.datatype == 'word':
             (data, word_index, numclass) = pickle.load(open(args.externaldata, 'rb'))
-            testword = dataloader.Worddata(data, getidx=True)
+            testword = Worddata(data, getidx=True)
             test_loader = DataLoader(testword, batch_size=args.batchsize, num_workers=4, shuffle=False)
     else:
         if args.datatype == "char":
-            (train, test, numclass) = loaddata.loaddata(args.data)
-            trainchar = dataloader.Chardata(train, getidx=True)
-            testchar = dataloader.Chardata(test, getidx=True)
+            (train, test, numclass) = loaddata(args.data)
+            trainchar = Chardata(train, getidx=True)
+            testchar = Chardata(test, getidx=True)
             train_loader = DataLoader(trainchar, batch_size=args.batchsize, num_workers=4, shuffle=True)
             test_loader = DataLoader(testchar, batch_size=args.batchsize, num_workers=4, shuffle=True)
             alphabet = trainchar.alphabet
             maxlength = args.charlength
         elif args.datatype == "word":
             (train, test, tokenizer,
-             numclass, rawtrain, rawtest) = loaddata.loaddatawithtokenize(args.data,
-                                                                          nb_words=args.dictionarysize,
-                                                                          datalen=args.wordlength,
-                                                                          withraw=True)
+             numclass, rawtrain, rawtest) = loaddatawithtokenize(args.data,
+                                                                 nb_words=args.dictionarysize,
+                                                                 datalen=args.wordlength,
+                                                                 withraw=True)
             word_index = tokenizer.word_index
-            trainword = dataloader.Worddata(train, getidx=True, rawdata=rawtrain)
-            testword = dataloader.Worddata(test, getidx=True, rawdata=rawtest)
+            trainword = Worddata(train, getidx=True, rawdata=rawtrain)
+            testword = Worddata(test, getidx=True, rawdata=rawtest)
             train_loader = DataLoader(trainword, batch_size=args.batchsize, num_workers=4, shuffle=True)
             test_loader = DataLoader(testword, batch_size=args.batchsize, num_workers=4, shuffle=True)
             maxlength = args.wordlength

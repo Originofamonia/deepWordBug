@@ -28,7 +28,7 @@ def replaceone(model, inputs, pred, classes):
             tempinputs = inputs.clone()
             tempinputs[:, :, i].zero_()
             tempoutput = model(tempinputs)
-            losses[:, i] = F.nll_loss(tempoutput, pred, reduce=False)
+            losses[:, i] = F.nll_loss(tempoutput, pred)
     return losses
 
 
