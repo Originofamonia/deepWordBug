@@ -52,6 +52,7 @@ def main():
     parser.add_argument('--maxnorm', type=float, default=400, metavar='B',
                         help='learning rate')
     parser.add_argument('--adv_train', type=bool, default=True, help='is adversarial training?')
+    parser.add_argument('--hidden_loss', type=bool, default=True, help='add loss on hidden')
     args = parser.parse_args()
 
     torch.manual_seed(9527)
@@ -119,9 +120,10 @@ def main():
             if args.adv_train:
                 y_adv, x_adv = get_x_adv(args, data, device, model, numclass, word_index, alphabet)
                 loss = F.nll_loss(y_adv, target)
-                # add a loss on penultimate hidden layer
-                h_loss = get_penultimate_hidden_loss(data, x_adv, device, model)
-                loss += h_loss
+                if args.hidden_loss:
+                    # add a loss on penultimate hidden layer
+                    h_loss = get_penultimate_hidden_loss(data, x_adv, device, model)
+                    loss += h_loss
             else:
                 output = model(inputs)
                 loss = F.nll_loss(output, target)
