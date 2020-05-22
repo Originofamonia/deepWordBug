@@ -19,8 +19,8 @@ def save_checkpoint(state, is_best, filename='checkpoint.dat'):
 
 def main():
     parser = argparse.ArgumentParser(description='Data')
-    parser.add_argument('--data', type=int, default=0, metavar='N',
-                        help='data 0 - 6')
+    parser.add_argument('--data', type=int, default=1, metavar='N',
+                        help='data 0 - 7')
     parser.add_argument('--charlength', type=int, default=1014, metavar='N',
                         help='length: default 1014')
     parser.add_argument('--wordlength', type=int, default=500, metavar='N',
@@ -71,7 +71,7 @@ def main():
     elif args.model == "wordcnn":
         args.datatype = "word"
 
-    print("Loading data...")
+    print("Loading data: {}".format(args.data))
     if args.datatype == "char":
         (train, test, numclass) = loaddata(args.data)
         trainchar = Chardata(train, getidx=True)
@@ -119,8 +119,8 @@ def main():
             if args.adv_train:
                 y_adv, x_adv = get_x_adv(args, data, device, model, numclass, word_index, alphabet)
                 loss = F.nll_loss(y_adv, target)
-                # add a constraint on penultimate hidden layer
-                h_loss = get_penultimate_hidden(data, x_adv, device, model)
+                # add a loss on penultimate hidden layer
+                h_loss = get_penultimate_hidden_loss(data, x_adv, device, model)
                 loss += h_loss
             else:
                 output = model(inputs)
@@ -186,7 +186,7 @@ def get_x_adv(args, data, device, model, numclass, word_index=None, alphabet=Non
     return y_adv, x_adv
 
 
-def get_penultimate_hidden(data, x_adv, device, model):
+def get_penultimate_hidden_loss(data, x_adv, device, model):
     inputs, target, idx, raw = data
     inputs, target = inputs.to(device), target.to(device)
     h = model.get_penultimate_hidden(inputs)

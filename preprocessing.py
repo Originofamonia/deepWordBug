@@ -138,7 +138,6 @@ def hashing_trick(text, n,
 
 
 class Tokenizer(object):
-
     def __init__(self, num_words=None,
                  filters='!"#$%&()*+,-./:;<=>?@[\\]^_`{|}~\t\n',
                  lower=True,
