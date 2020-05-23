@@ -43,11 +43,12 @@ def generate_char_adv(model, args, numclass, data, device, alphabet):
 
     inputs, target, idx, raw = data
     inputs, target = inputs.to(device), target.to(device)
-    output = model(inputs)
+    h = model(inputs)
+    outputs = model.h_to_logits(h)
     # tgt.append(target)
     # origsample.append(inputs)
     # origsampleidx.append(idx)
-    pred = torch.max(output, 1)[1].view(target.size())
+    pred = torch.max(outputs, 1)[1].view(target.size())
     losses = torch.zeros(inputs.size()[0], inputs.size()[2])
 
     losses = scoring_char.scorefunc(args.scoring)(model, inputs, pred, numclass)

@@ -36,9 +36,9 @@ def main():
                         help='Backward direction')
     parser.add_argument('--epochs', type=int, default=10, metavar='B',
                         help='Number of epochs')
-    parser.add_argument('--power', type=int, default=30, metavar='N',
+    parser.add_argument('--power', type=int, default=25, metavar='N',
                         help='Attack power')
-    parser.add_argument('--batchsize', type=int, default=20, metavar='B',
+    parser.add_argument('--batchsize', type=int, default=100, metavar='B',
                         help='batch size')
     parser.add_argument('--maxbatches', type=int, default=None, metavar='B',
                         help='maximum batches of adv samples generated')
@@ -133,8 +133,9 @@ def train_test(alphabet, args, device, iterator, model, numclass, optimizer, tes
                 else:
                     desc = 'loss:' + "{:10.4f}".format(loss.item())
             else:
-                output = model(inputs)
-                loss = F.nll_loss(output, target)
+                h = model(inputs)
+                outputs = model.h_to_logits(h)
+                loss = F.nll_loss(outputs, target)
                 desc = 'loss:' + "{:10.4f}".format(loss.item())
 
             iterator.set_description(desc=desc)
@@ -151,10 +152,11 @@ def train_test(alphabet, args, device, iterator, model, numclass, optimizer, tes
             inputs, target, idx, raw = data
             inputs, target = inputs.to(device), target.to(device)
             # inference on clean test set
-            output = model(inputs)
-            loss = F.nll_loss(output, target)
+            h = model(inputs)
+            outputs = model.h_to_logits(h)
+            loss = F.nll_loss(outputs, target)
             total_loss += loss.item()
-            pred = output.data.max(1, keepdim=True)[1]
+            pred = outputs.data.max(1, keepdim=True)[1]
             clean_correct += pred.eq(target.data.view_as(pred)).cpu().sum().item()
             # inference on adv test set
             y_adv, x_adv = get_adv(args, data, device, model, numclass, word_index, alphabet)
@@ -194,15 +196,16 @@ def get_adv(args, data, device, model, numclass, word_index=None, alphabet=None)
             if word_index[i] + 3 < args.dictionarysize:
                 index2word[word_index[i] + 3] = i
         x_adv = generate_word_adv(model, args, numclass, data, device, index2word, word_index)
-    y_adv = model(x_adv)
+    h_adv = model(x_adv)
+    y_adv = model.h_to_logits(h_adv)
     return y_adv, x_adv
 
 
 def get_penultimate_hidden_loss(data, x_adv, device, model):
     inputs, target, idx, raw = data
     inputs, target = inputs.to(device), target.to(device)
-    h = model.get_penultimate_hidden(inputs)
-    h_adv = model.get_penultimate_hidden(x_adv)
+    h = model(inputs)
+    h_adv = model(x_adv)
     h_loss = nn.MSELoss()(h_adv, h)
     return h_loss
 

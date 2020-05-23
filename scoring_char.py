@@ -27,7 +27,8 @@ def replaceone(model, inputs, pred, classes):
         for i in range(inputs.size()[2]):
             tempinputs = inputs.clone()
             tempinputs[:, :, i].zero_()
-            tempoutput = model(tempinputs)
+            h = model(tempinputs)
+            tempoutput = model.h_to_logits(h)
             losses[:, i] = F.nll_loss(tempoutput, pred, reduction='none')
     return losses
 
@@ -40,7 +41,8 @@ def temporal(model, inputs, pred, classes):
         if i != inputs.size()[2] - 1:
             tempinputs[:, :, i + 1:].zero_()
         with torch.no_grad():
-            tempoutput = torch.exp(model(tempinputs))
+            h = model(tempinputs)
+            tempoutput = torch.exp(model.h_to_logits(h))
         losses1[:, i] = tempoutput.gather(1, pred.view(-1, 1)).view(-1)
     dloss[:, 0] = losses1[:, 0] - 1.0 / classes
     for i in range(1, inputs.size()[1]):
@@ -56,7 +58,8 @@ def temporaltail(model, inputs, pred, classes):
         if i != 0:
             tempinputs[:, :, :i].zero_()
         with torch.no_grad():
-            tempoutput = torch.exp(model(tempinputs))
+            h = model(tempinputs)
+            tempoutput = torch.exp(model.h_to_logits(h))
         losses1[:, i] = tempoutput.gather(1, pred.view(-1, 1)).view(-1)
     dloss[:, -1] = losses1[:, -1] - 1.0 / classes
     for i in range(inputs.size()[2] - 1):
@@ -75,8 +78,9 @@ def grad(model, inputs, pred, classes):
     dloss = torch.zeros(inputs.size()[0], inputs.size()[2])
     inputs1 = inputs.clone()
     inputs1.requires_grad_(True)
-    output = model(inputs1)
-    loss = F.nll_loss(output, pred)
+    h = model(inputs1)
+    outputs = model.h_to_logits(h)
+    loss = F.nll_loss(outputs, pred)
     loss.backward()
     score = inputs1.grad.norm(2, dim=1)
     return score
