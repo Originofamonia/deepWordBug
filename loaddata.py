@@ -46,6 +46,7 @@ def loaddata(i=0):
     testadd = textdatafolder + datanames[i] + '_csv/test.csv'
     traindata = Dataset(trainadd, lines[i])
     testdata = Dataset(testadd, lines[i])
+    print(trainadd, testadd)
     return traindata, testdata, classes[i]
     # else:
     #     data = dataset()

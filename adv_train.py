@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
 import argparse
+from tqdm import tqdm
 from loaddata import loaddata, loaddatawithtokenize
 from dataloader import Chardata, Worddata
 import shutil
@@ -19,13 +20,13 @@ def save_checkpoint(state, is_best, filename='checkpoint.dat'):
 
 def main():
     parser = argparse.ArgumentParser(description='Data')
-    parser.add_argument('--data', type=int, default=1, metavar='N',
+    parser.add_argument('--data', type=int, default=3, metavar='N',
                         help='data 0 - 7')
     parser.add_argument('--charlength', type=int, default=1014, metavar='N',
                         help='length: default 1014')
     parser.add_argument('--wordlength', type=int, default=500, metavar='N',
                         help='length: default 500')
-    parser.add_argument('--model', type=str, default='charcnn', metavar='N',
+    parser.add_argument('--model', type=str, default='simplernn', metavar='N',
                         help='model type: LSTM as default')
     parser.add_argument('--space', type=bool, default=False, metavar='B',
                         help='Whether including space in the alphabet')
@@ -47,18 +48,18 @@ def main():
                         help='Transformer function.')
     parser.add_argument('--dictionarysize', type=int, default=20000, metavar='B',
                         help='batch size')
-    parser.add_argument('--lr', type=float, default=0.0005, metavar='B',
+    parser.add_argument('--lr', type=float, default=5e-4, metavar='B',
                         help='learning rate')
     parser.add_argument('--maxnorm', type=float, default=400, metavar='B',
                         help='learning rate')
     parser.add_argument('--adv_train', type=bool, default=True, help='is adversarial training?')
-    parser.add_argument('--hidden_loss', type=bool, default=True, help='add loss on hidden')
+    parser.add_argument('--hidden_loss', type=bool, default=False, help='add loss on hidden')
     args = parser.parse_args()
 
     torch.manual_seed(9527)
     torch.cuda.manual_seed_all(9527)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     if args.model == "charcnn":
         args.datatype = "char"
@@ -72,7 +73,6 @@ def main():
     elif args.model == "wordcnn":
         args.datatype = "word"
 
-    print("Loading data: {}".format(args.data))
     if args.datatype == "char":
         (train, test, numclass) = loaddata(args.data)
         trainchar = Chardata(train, getidx=True)
@@ -107,27 +107,37 @@ def main():
 
     model = model.to(device)
     print(model)
+    iterator = tqdm(train_loader, ncols=0, leave=False)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
+    train_test(alphabet, args, device, iterator, model, numclass, optimizer, test_loader, word_index)
+
+
+def train_test(alphabet, args, device, iterator, model, numclass, optimizer, test_loader, word_index):
     bestacc = 0
     for epoch in range(1, args.epochs + 1):
-        print('Start epoch %d' % epoch)
+        print('Epoch: {}/{}'.format(epoch, args.epochs))
         model.train()
-        for dataid, data in enumerate(train_loader):
+        for dataid, data in enumerate(iterator):
             inputs, target, idx, raw = data
             inputs, target = Variable(inputs), Variable(target)
             inputs, target = inputs.to(device), target.to(device)
             if args.adv_train:
-                y_adv, x_adv = get_x_adv(args, data, device, model, numclass, word_index, alphabet)
+                y_adv, x_adv = get_adv(args, data, device, model, numclass, word_index, alphabet)
                 loss = F.nll_loss(y_adv, target)
                 if args.hidden_loss:
                     # add a loss on penultimate hidden layer
                     h_loss = get_penultimate_hidden_loss(data, x_adv, device, model)
                     loss += h_loss
+                    desc = 'h_loss:' + "{:10.4f}".format(h_loss.item()) + ' loss:' + "{:10.4f}".format(loss.item())
+                else:
+                    desc = 'loss:' + "{:10.4f}".format(loss.item())
             else:
                 output = model(inputs)
                 loss = F.nll_loss(output, target)
+                desc = 'loss:' + "{:10.4f}".format(loss.item())
 
+            iterator.set_description(desc=desc)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -147,7 +157,7 @@ def main():
             pred = output.data.max(1, keepdim=True)[1]
             clean_correct += pred.eq(target.data.view_as(pred)).cpu().sum().item()
             # inference on adv test set
-            y_adv, x_adv = get_x_adv(args, data, device, model, numclass, word_index, alphabet)
+            y_adv, x_adv = get_adv(args, data, device, model, numclass, word_index, alphabet)
             loss_adv = F.nll_loss(y_adv, target)
             total_loss_adv += loss_adv.item()
             pred_adv = y_adv.data.max(1, keepdim=True)[1]
@@ -175,7 +185,7 @@ def main():
         }, is_best, filename=fname)
 
 
-def get_x_adv(args, data, device, model, numclass, word_index=None, alphabet=None):
+def get_adv(args, data, device, model, numclass, word_index=None, alphabet=None):
     if args.datatype == "char":
         x_adv = generate_char_adv(model, args, numclass, data, device, alphabet)
     elif args.datatype == "word":
