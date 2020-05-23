@@ -77,7 +77,7 @@ def main():
         (train, test, numclass) = loaddata(args.data)
         trainchar = Chardata(train, getidx=True)
         testchar = Chardata(test, getidx=True)
-        train_loader = DataLoader(trainchar, batch_size=args.batchsize, num_workers=4, shuffle=False)
+        train_loader = DataLoader(trainchar, batch_size=args.batchsize, num_workers=4, shuffle=True)
         test_loader = DataLoader(testchar, batch_size=args.batchsize, num_workers=4, shuffle=False)
         alphabet = trainchar.alphabet
         maxlength = args.charlength
@@ -89,7 +89,7 @@ def main():
         word_index = tokenizer.word_index
         trainword = Worddata(train, getidx=True, rawdata=rawtrain)
         testword = Worddata(test, getidx=True, rawdata=rawtest)
-        train_loader = DataLoader(trainword, batch_size=args.batchsize, num_workers=4, shuffle=False)
+        train_loader = DataLoader(trainword, batch_size=args.batchsize, num_workers=4, shuffle=True)
         test_loader = DataLoader(testword, batch_size=args.batchsize, num_workers=4, shuffle=False)
         maxlength = args.wordlength
         alphabet = None
@@ -117,11 +117,12 @@ def train_test(alphabet, args, device, iterator, model, numclass, optimizer, tes
     bestacc = 0
     for epoch in range(1, args.epochs + 1):
         print('Epoch: {}/{}'.format(epoch, args.epochs))
-        model.train()
         for dataid, data in enumerate(iterator):
+            model.train()
             inputs, target, idx, raw = data
             inputs, target = Variable(inputs), Variable(target)
             inputs, target = inputs.to(device), target.to(device)
+            optimizer.zero_grad()
             if args.adv_train:
                 y_adv, x_adv = get_adv(args, data, device, model, numclass, word_index, alphabet)
                 loss = F.nll_loss(y_adv, target)
@@ -139,7 +140,6 @@ def train_test(alphabet, args, device, iterator, model, numclass, optimizer, tes
                 desc = 'loss:' + "{:10.4f}".format(loss.item())
 
             iterator.set_description(desc=desc)
-            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
