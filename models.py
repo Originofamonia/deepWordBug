@@ -87,10 +87,10 @@ class SmallRNN(nn.Module):
         x = x[-1]
         # x = self.linear(x)
         # x = self.log_softmax(x)
-        if returnembd:
-            return embd, x
-        else:
-            return x
+        # if returnembd:
+        #     return embd, x
+        # else:
+        return x
 
     def h_to_logits(self, h):
         x = self.linear(h)

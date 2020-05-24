@@ -38,7 +38,7 @@ def main():
                         help='Number of epochs')
     parser.add_argument('--power', type=int, default=25, metavar='N',
                         help='Attack power')
-    parser.add_argument('--batchsize', type=int, default=100, metavar='B',
+    parser.add_argument('--batchsize', type=int, default=200, metavar='B',
                         help='batch size')
     parser.add_argument('--maxbatches', type=int, default=None, metavar='B',
                         help='maximum batches of adv samples generated')
@@ -52,7 +52,7 @@ def main():
                         help='learning rate')
     parser.add_argument('--maxnorm', type=float, default=400, metavar='B',
                         help='learning rate')
-    parser.add_argument('--adv_train', type=bool, default=True, help='is adversarial training?')
+    parser.add_argument('--adv_train', type=bool, default=False, help='is adversarial training?')
     parser.add_argument('--hidden_loss', type=bool, default=False, help='add loss on hidden')
     args = parser.parse_args()
 
@@ -107,6 +107,7 @@ def main():
 
     model = model.to(device)
     print(model)
+    print(args)
     iterator = tqdm(train_loader, ncols=0, leave=False)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
