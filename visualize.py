@@ -62,7 +62,7 @@ def draw_pca_plot(x, y):
                     c=color)
         # plt.text(mean.loc[digit, 'principal component 1'], mean.loc[digit, 'principal component 2'], digit,
         #          fontsize=14)
-    plt.title("PCA h")
+    plt.title("PCA h_adv")
     plt.legend(digits)
     plt.grid()
     plt.show()
@@ -92,7 +92,7 @@ def draw_tsne_plot(x, y):
 
 
 def main():
-    model_path = './outputs/simplernn_0_clean.dat'
+    model_path = './outputs/simplernn_0_adv.dat'
     parser = argparse.ArgumentParser(description='Data')
     parser.add_argument('--data', type=int, default=0, metavar='N',
                         help='data 0 - 7')
@@ -112,7 +112,7 @@ def main():
                         help='Number of epochs')
     parser.add_argument('--power', type=int, default=25, metavar='N',
                         help='Attack power')
-    parser.add_argument('--batchsize', type=int, default=50, metavar='B',
+    parser.add_argument('--batchsize', type=int, default=100, metavar='B',
                         help='batch size')
     parser.add_argument('--maxbatches', type=int, default=None, metavar='B',
                         help='maximum batches of adv samples generated')
@@ -191,20 +191,15 @@ def main():
         for batch_idx, data in enumerate(test_loader):
             inputs, targets, idx, raw = data
             inputs, targets, idx = inputs.to(device), targets.to(device), idx.to(device)
-            indices = torch.tensor([0, 1, 26, 32]).to(device)
-            # data[0] = torch.index_select(inputs, 0, indices)
-            # data[1] = torch.index_select(targets, 0, indices)
-            # data[2] = torch.index_select(idx, 0, indices)
-            # data[3] = data[3][slice(0, 1, 26, 32)]
+            indices = torch.tensor([58, 3, 26, 32]).to(device)
+            print(targets)
             inputs = torch.index_select(inputs, 0, indices)
             targets = torch.index_select(targets, 0, indices)
-            print('2: ', raw[0])
-            print('3: ', raw[1])
-            print('1: ', raw[26])
-            print('0: ', raw[32])
             h = model(inputs)
             h_orig = h.view(h.size()[0], -1)
             y_adv, x_adv = get_adv(args, data, device, model, numclass, word2index, alphabet)
+            x_adv = torch.index_select(x_adv, 0, indices)
+            y_adv = torch.index_select(y_adv, 0, indices)
             ah = model(x_adv)
             ah = ah.view(ah.size()[0], -1)
             h = torch.cat((h_orig, ah), 0)
