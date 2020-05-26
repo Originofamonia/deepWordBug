@@ -138,7 +138,7 @@ if __name__ == '__main__':
                         help='model file path')
     args = parser.parse_args()
     if not args.modelpath:
-        args.modelpath = 'models/%s_%d_bestmodel.dat' % (args.model,args.data)
+        args.modelpath = 'outputs/%s_%d_bestmodel.dat' % (args.model,args.data)
     torch.manual_seed(8)
     torch.cuda.manual_seed(8)
     

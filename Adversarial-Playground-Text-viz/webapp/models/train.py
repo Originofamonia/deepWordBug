@@ -122,9 +122,9 @@ for epoch in range(args.epochs+1):
     if is_best:
         bestacc = acc
     if args.dictionarysize!=20000:
-        fname = "models/" + args.model +str(args.dictionarysize) + "_" + str(args.data)
+        fname = "outputs/" + args.model +str(args.dictionarysize) + "_" + str(args.data)
     else:
-        fname = "models/" + args.model + "_" + str(args.data)
+        fname = "outputs/" + args.model + "_" + str(args.data)
         
     save_checkpoint({
             'epoch': epoch + 1,

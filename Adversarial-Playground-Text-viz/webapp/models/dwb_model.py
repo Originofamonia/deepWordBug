@@ -57,7 +57,7 @@ def transchar(x, alphabet=default_alphabet,length=1014):
 def visualize(input_str, model_num, power, scoring_alg, transformer_alg, dict_word=[], index2word = [], classes_list = [], 
 	model_type = 'simplernn', mode = 'word', maxlength = 500, device = None, filter_char = default_filter, alphabet = default_alphabet):
 
-    info = pickle.load(open(os.getcwd() + '/webapp/models/dict/' + model_num + '.info', 'rb'))
+    info = pickle.load(open(os.getcwd() + '/webapp/outputs/dict/' + model_num + '.info', 'rb'))
     dict_word = info['word_index']
     index2word = info['index2word']
     classes_list = info['classes_list']
@@ -67,7 +67,7 @@ def visualize(input_str, model_num, power, scoring_alg, transformer_alg, dict_wo
 
     torch.manual_seed(8)
     torch.cuda.manual_seed(8)
-    modelpath = 'webapp/models/models/%s_%s_bestmodel.dat' % (model_type, model_num)
+    modelpath = 'webapp/outputs/outputs/%s_%s_bestmodel.dat' % (model_type, model_num)
 
     if torch.cuda.is_available():
     	device = torch.device("cuda")

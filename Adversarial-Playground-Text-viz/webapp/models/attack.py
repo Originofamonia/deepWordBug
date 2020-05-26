@@ -26,7 +26,7 @@ parser.add_argument('--externaldata', type=str, default='', metavar='S',
                     help='External database file. Default: Empty string')
 parser.add_argument('--model', type=str, default='simplernn', metavar='S',
                     help='model type(simplernn, charcnn, bilstm). LSTM as default.')
-parser.add_argument('--modelpath', type=str, default='models/simplernn_0_bestmodel.dat', metavar='S',
+parser.add_argument('--modelpath', type=str, default='outputs/simplernn_0_bestmodel.dat', metavar='S',
                     help='model file path')
 parser.add_argument('--power', type=int, default=0, metavar='N',
                     help='Attack power')

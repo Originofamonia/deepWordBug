@@ -153,7 +153,7 @@ def generate_word_adv(model, args, numclass, data, device, index2word, word_inde
     # origsample.append(inputs)
     # origsampleidx.append(idx)
     # tgt.append(target)
-    # wtmp = []
+    wtmp = []
     output = model(inputs)
     pred = torch.max(output, 1)[1].view(target.size())
 
@@ -163,13 +163,14 @@ def generate_word_adv(model, args, numclass, data, device, index2word, word_inde
 
     advinputs = inputs.clone()
 
-    # for k in range(inputs.size()[0]):
-    #     wtmp.append([])
-    #     for i in range(inputs.size()[1]):
-    #         if advinputs[k, i].item() > 3:
-    #             wtmp[-1].append(index2word[advinputs[k, i].item()])
-    #         else:
-    #             wtmp[-1].append('')
+    for k in range(inputs.size()[0]):
+        wtmp.append([])
+        for i in range(inputs.size()[1]):
+            if advinputs[k, i].item() > 3:
+                wtmp[-1].append(index2word[advinputs[k, i].item()])
+            else:
+                wtmp[-1].append('')
+
     for k in range(inputs.size()[0]):
         j = 0
         t = 0
@@ -177,11 +178,12 @@ def generate_word_adv(model, args, numclass, data, device, index2word, word_inde
             if advinputs[k, indices[k][t]].item() > 3:
                 word, advinputs[k, indices[k][t]] = transformer.transform(args.transformer)(
                     advinputs[k, indices[k][t]].item(), word_index, index2word, top_words=args.dictionarysize)
-                # wtmp[k][indices[k][t]] = word
+                wtmp[k][indices[k][t]] = word
                 # print(word)
                 j += 1
             t += 1
-
+    a = ' '.join(wtmp[0])
+    print(a)
     return advinputs
 
 
@@ -273,7 +275,7 @@ def main():
                         help='External database file. Default: Empty string')
     parser.add_argument('--model', type=str, default='charcnn', metavar='S',
                         help='model type(simplernn, charcnn, bilstm). LSTM as default.')
-    parser.add_argument('--modelpath', type=str, default='models/charcnn_0_bestmodel.dat', metavar='S',
+    parser.add_argument('--modelpath', type=str, default='outputs/charcnn_0_bestmodel.dat', metavar='S',
                         help='model file path')
     parser.add_argument('--power', type=int, default=30, metavar='N',
                         help='Attack power')

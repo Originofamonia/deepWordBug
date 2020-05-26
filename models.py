@@ -97,19 +97,6 @@ class SmallRNN(nn.Module):
         x = self.log_softmax(x)
         return x
 
-    # def get_penultimate_hidden(self, inputs, returnembd=False):
-    #     embd = self.embd(inputs)
-    #     if returnembd:
-    #         embd = Variable(embd.data, requires_grad=True).to(device)
-    #         embd.retain_grad()
-    #
-    #     h0 = Variable(torch.zeros(self.hsize, embd.size(0), self.hiddensize)).to(device)
-    #     c0 = Variable(torch.zeros(self.hsize, embd.size(0), self.hiddensize)).to(device)
-    #     x = embd.transpose(0, 1)
-    #     x, (hn, cn) = self.lstm(x, (h0, c0))
-    #     x = x[-1]
-    #     return x
-
 
 class SmallCharRNN(nn.Module):
     def __init__(self, classes=4, bidirection=False, layernum=1, char_size=69, hiddensize=100):

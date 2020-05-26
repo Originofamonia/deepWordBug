@@ -22,7 +22,7 @@ parser.add_argument('--length', type=int, default=1014, metavar='N',
                     help='length: default 1014')
 parser.add_argument('--model', type=str, default='charcnn', metavar='N',
                     help='model type: LSTM as default')
-parser.add_argument('--modelpath', type=str, default='models/charcnn_0_bestmodel.dat', metavar='N',
+parser.add_argument('--modelpath', type=str, default='outputs/charcnn_0_bestmodel.dat', metavar='N',
                     help='model type: LSTM as default')
 parser.add_argument('--space', type=bool, default=False, metavar='B',
                     help='Whether including space in the alphabet')
