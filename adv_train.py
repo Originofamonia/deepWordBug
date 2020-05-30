@@ -9,7 +9,7 @@ from loaddata import loaddata, loaddatawithtokenize
 from dataloader import Chardata, Worddata
 import shutil
 from models import CharCNN, SmallRNN, SmallCharRNN, WordCNN
-from attack import generate_char_adv, generate_word_adv
+from attack import generate_char_adv, generate_word_adv, KLDivLoss
 
 
 def save_checkpoint(state, is_best, filename='checkpoint.dat'):
@@ -52,8 +52,10 @@ def main():
                         help='learning rate')
     parser.add_argument('--maxnorm', type=float, default=400, metavar='B',
                         help='learning rate')
-    parser.add_argument('--adv_train', type=bool, default=False, help='is adversarial training?')
-    parser.add_argument('--hidden_loss', type=bool, default=False, help='add loss on hidden')
+    parser.add_argument('--adv_train', type=bool, default=True, help='is adversarial training?')
+    parser.add_argument('--hidden_loss', type=bool, default=True, help='add loss on hidden')
+    parser.add_argument('--temperature', default=1, type=float,
+                        help='temperature for smoothing the soft target')
     args = parser.parse_args()
 
     torch.manual_seed(9527)
@@ -129,7 +131,7 @@ def train_test(alphabet, args, device, iterator, model, numclass, optimizer, tes
                 loss = F.nll_loss(y_adv, target)
                 if args.hidden_loss:
                     # add a loss on penultimate hidden layer
-                    h_loss = get_penultimate_hidden_loss(data, x_adv, device, model)
+                    h_loss = get_penultimate_hidden_loss(data, x_adv, device, model, args)
                     loss += h_loss
                     desc = 'h_loss:' + "{:10.4f}".format(h_loss.item()) + ' loss:' + "{:10.4f}".format(loss.item())
                 else:
@@ -202,12 +204,12 @@ def get_adv(args, data, device, model, numclass, word_index=None, alphabet=None)
     return y_adv, x_adv
 
 
-def get_penultimate_hidden_loss(data, x_adv, device, model):
+def get_penultimate_hidden_loss(data, x_adv, device, model, args):
     inputs, target, idx, raw = data
     inputs, target = inputs.to(device), target.to(device)
     h = model(inputs)
     h_adv = model(x_adv)
-    h_loss = nn.MSELoss()(h_adv, h)
+    h_loss = KLDivLoss(h_adv, h, args.temperature)
     return h_loss
 
 
