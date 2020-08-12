@@ -203,11 +203,14 @@ def get_adv(args, data, device, model, numclass, word_index=None, alphabet=None)
 
 
 def get_hloss(data, x_adv, device, model, args):
+    MSEloss = nn.MSELoss()
+
     inputs, target, idx, raw = data
     inputs, target = inputs.to(device), target.to(device)
     h, y = model(inputs)
     h_adv, y_adv = model(x_adv)
-    h_loss = KLDivLoss(y_adv, y, args.temperature)
+    # h_loss = KLDivLoss(y_adv, y, args.temperature)
+    h_loss = MSEloss(y_adv, y)
     return h_loss
 
 
