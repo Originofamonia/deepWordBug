@@ -27,6 +27,7 @@ from attack import generate_char_adv, generate_word_adv
 from loaddata import loaddata, loaddatawithtokenize
 from dataloader import Chardata, Worddata
 from adv_train import get_adv
+plt.rcParams.update({'font.size': 19})
 
 
 def get_hidden_layer(net, filename, x, device):
@@ -55,14 +56,15 @@ def draw_pca_plot(x, y):
     digits = [0, 1, 2, 3]  # , 4, 5, 6, 7, 8, 9]
     colors = ['red', 'green', 'blue', 'purple']  # , 'yellow', 'black', 'orange', 'brown', 'grey', 'navy']
     mean = finalDf.groupby('digit').mean()
+    s = plt.rcParams['lines.markersize'] ** 3
     for digit, color in zip(digits, colors):
         indices_to_keep = finalDf['digit'] == digit
         plt.scatter(finalDf.loc[indices_to_keep, 'principal component 1'],
                     finalDf.loc[indices_to_keep, 'principal component 2'],
-                    c=color)
+                    c=color, s=s)
         # plt.text(mean.loc[digit, 'principal component 1'], mean.loc[digit, 'principal component 2'], digit,
         #          fontsize=14)
-    plt.title("PCA h_adv")
+    plt.title("PCA h")
     plt.legend(digits)
     plt.grid()
     plt.show()
@@ -92,7 +94,7 @@ def draw_tsne_plot(x, y):
 
 
 def main():
-    model_path = './outputs/simplernn_0_adv.dat'
+    model_path = './outputs/simplernn_0_clean.dat'
     parser = argparse.ArgumentParser(description='Data')
     parser.add_argument('--data', type=int, default=0, metavar='N',
                         help='data 0 - 7')
@@ -191,7 +193,7 @@ def main():
         for batch_idx, data in enumerate(test_loader):
             inputs, targets, idx, raw = data
             inputs, targets, idx = inputs.to(device), targets.to(device), idx.to(device)
-            indices = torch.tensor([58, 3, 26, 32]).to(device)
+            indices = torch.tensor([58, 3, 26, 34]).to(device)
             print(targets)
             inputs = torch.index_select(inputs, 0, indices)
             targets = torch.index_select(targets, 0, indices)

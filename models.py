@@ -39,16 +39,16 @@ class CharCNN(nn.Module):
         x = self._pool1(F.relu(self._conv6(x)))
         x = x.view(x.size(0), -1)
         x = self._drop1(F.relu(self._fc1(x)))
-        x = self._drop1(F.relu(self._fc2(x)))
-        # x = self._fc3(x)
-        # x = self.log_softmax(x)
-
-        return x
-
-    def h_to_logits(self, h):
-        x = self._fc3(h)
+        h = x = self._drop1(F.relu(self._fc2(x)))
+        x = self._fc3(x)
         x = self.log_softmax(x)
-        return x
+
+        return h, x
+
+    # def h_to_logits(self, h):
+    #     x = self._fc3(h)
+    #     x = self.log_softmax(x)
+    #     return x
 
     # def get_penultimate_hidden(self, inputs):
     #     x = self._pool1(F.relu(self._conv1(inputs)))
@@ -84,18 +84,16 @@ class SmallRNN(nn.Module):
         c0 = Variable(torch.zeros(self.hsize, embd.size(0), self.hiddensize)).to(device)
         x = embd.transpose(0, 1)
         x, (hn, cn) = self.lstm(x, (h0, c0))
-        x = x[-1]
-        # x = self.linear(x)
-        # x = self.log_softmax(x)
-        # if returnembd:
-        #     return embd, x
-        # else:
-        return x
-
-    def h_to_logits(self, h):
-        x = self.linear(h)
+        h = x = x[-1]
+        x = self.linear(x)
         x = self.log_softmax(x)
-        return x
+
+        return h, x
+
+    # def h_to_logits(self, h):
+    #     x = self.linear(h)
+    #     x = self.log_softmax(x)
+    #     return x
 
 
 class SmallCharRNN(nn.Module):

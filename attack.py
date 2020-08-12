@@ -154,7 +154,7 @@ def generate_word_adv(model, args, numclass, data, device, index2word, word_inde
     # origsampleidx.append(idx)
     # tgt.append(target)
     # wtmp = []
-    output = model(inputs)
+    h, output = model(inputs)
     pred = torch.max(output, 1)[1].view(target.size())
 
     losses = scoring.scorefunc(args.scoring)(model, inputs, pred, numclass)

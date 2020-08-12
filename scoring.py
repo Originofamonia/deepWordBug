@@ -29,7 +29,7 @@ def replaceone(model, inputs, pred, classes):
         tempinputs = inputs.clone()
         tempinputs[:, i] = 2
         with torch.no_grad():
-            tempoutput = model(tempinputs)
+            h, tempoutput = model(tempinputs)
         losses[:, i] = F.nll_loss(tempoutput, pred, reduction='none')
     return losses
 

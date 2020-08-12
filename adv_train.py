@@ -20,7 +20,7 @@ def save_checkpoint(state, is_best, filename='checkpoint.dat'):
 
 def main():
     parser = argparse.ArgumentParser(description='Data')
-    parser.add_argument('--data', type=int, default=3, metavar='N',
+    parser.add_argument('--data', type=int, default=0, metavar='N',
                         help='data 0 - 7')
     parser.add_argument('--charlength', type=int, default=1014, metavar='N',
                         help='length: default 1014')
@@ -131,14 +131,13 @@ def train_test(alphabet, args, device, iterator, model, numclass, optimizer, tes
                 loss = F.nll_loss(y_adv, target)
                 if args.hidden_loss:
                     # add a loss on penultimate hidden layer
-                    h_loss = get_penultimate_hidden_loss(data, x_adv, device, model, args)
+                    h_loss = get_hloss(data, x_adv, device, model, args)
                     loss += h_loss
                     desc = 'h_loss:' + "{:10.4f}".format(h_loss.item()) + ' loss:' + "{:10.4f}".format(loss.item())
                 else:
                     desc = 'loss:' + "{:10.4f}".format(loss.item())
             else:
-                h = model(inputs)
-                outputs = model.h_to_logits(h)
+                h, outputs = model(inputs)
                 loss = F.nll_loss(outputs, target)
                 desc = 'loss:' + "{:10.4f}".format(loss.item())
 
@@ -155,8 +154,7 @@ def train_test(alphabet, args, device, iterator, model, numclass, optimizer, tes
             inputs, target, idx, raw = data
             inputs, target = inputs.to(device), target.to(device)
             # inference on clean test set
-            h = model(inputs)
-            outputs = model.h_to_logits(h)
+            h, outputs = model(inputs)
             loss = F.nll_loss(outputs, target)
             total_loss += loss.item()
             pred = outputs.data.max(1, keepdim=True)[1]
@@ -199,17 +197,17 @@ def get_adv(args, data, device, model, numclass, word_index=None, alphabet=None)
             if word_index[i] + 3 < args.dictionarysize:
                 index2word[word_index[i] + 3] = i
         x_adv = generate_word_adv(model, args, numclass, data, device, index2word, word_index)
-    h_adv = model(x_adv)
-    y_adv = model.h_to_logits(h_adv)
+    h_adv, y_adv = model(x_adv)
+    # y_adv = model.h_to_logits(h_adv)
     return y_adv, x_adv
 
 
-def get_penultimate_hidden_loss(data, x_adv, device, model, args):
+def get_hloss(data, x_adv, device, model, args):
     inputs, target, idx, raw = data
     inputs, target = inputs.to(device), target.to(device)
-    h = model(inputs)
-    h_adv = model(x_adv)
-    h_loss = KLDivLoss(h_adv, h, args.temperature)
+    h, y = model(inputs)
+    h_adv, y_adv = model(x_adv)
+    h_loss = KLDivLoss(y_adv, y, args.temperature)
     return h_loss
 
 
